@@ -3,9 +3,10 @@
  * 填空题型 - 选择正确的单词填入空白处
  */
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { QuizItem } from '@/db';
+import { shuffledUnlessIdentity } from '@/utils/quizPresentation';
 import styles from './FillBlank.module.css';
 
 interface FillBlankProps {
@@ -23,6 +24,12 @@ export const FillBlank: React.FC<FillBlankProps> = ({ question, onAnswer, isAnsw
   const [submitted, setSubmitted] = useState(false);
   const submittedRef = useRef(false);
   const answerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // The letter badge must follow the rendered order, not the authored one.
+  const displayOptions = useMemo(
+    () => shuffledUnlessIdentity(question.options ?? [], question.id, option => option.value),
+    [question.id, question.options]
+  );
 
   useEffect(
     () => () => {
@@ -88,7 +95,7 @@ export const FillBlank: React.FC<FillBlankProps> = ({ question, onAnswer, isAnsw
 
       {/* 选项 */}
       <div className={styles.options}>
-        {question.options?.map((option, index) => (
+        {displayOptions.map((option, index) => (
           <motion.button
             key={option.value}
             className={`${styles.option} ${

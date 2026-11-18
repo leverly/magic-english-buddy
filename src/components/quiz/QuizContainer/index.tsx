@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { QuizItem } from '@/db';
+import type { QuizItem, Story } from '@/db';
 import { QuizProgress } from '../QuizProgress';
 import { ImageChoice } from '../ImageChoice';
 import { WordBuilder } from '../WordBuilder';
@@ -35,6 +35,8 @@ interface QuizContainerProps {
   attemptStartedAt?: number;
   /** Persistence is best effort; answering remains usable if storage is unavailable. */
   onDraftChange?: (draft: QuizDraftSnapshot) => Promise<void> | void;
+  /** Source story, used to explain a wrong answer with its own sentence. */
+  story?: Story;
 }
 
 export interface QuizResultData {
@@ -76,6 +78,7 @@ export const QuizContainer: React.FC<QuizContainerProps> = ({
   initialDraft = null,
   attemptStartedAt,
   onDraftChange,
+  story,
 }) => {
   // 状态
   const [currentIndex, setCurrentIndex] = useState(initialDraft?.currentQuestionIndex ?? 0);
@@ -321,6 +324,8 @@ export const QuizContainer: React.FC<QuizContainerProps> = ({
                   ? (currentQuestion.correctOrder || []).join(' ')
                   : currentQuestion.correctAnswer || ''
               }
+              question={currentQuestion}
+              story={story}
               onContinue={handleContinue}
             />
           </motion.div>

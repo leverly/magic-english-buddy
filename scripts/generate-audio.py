@@ -167,6 +167,32 @@ legacy_l1_prompts = {
 legacy_files = sorted({manifest["clips"][text]["file"] for text in legacy_l1_prompts if text in manifest["clips"]} - covered)
 unknown_files = {clip["file"] for clip in manifest["clips"].values()} - covered - set(legacy_files)
 if unknown_files:
+    # Rewritten lesson text leaves the previous recording orphaned: it is still in
+    # the manifest (keyed by text) but no story refers to it any more. Drop those
+    # entries instead of failing, so a content edit stays reproducible.
+    current_story_texts = {required_story_text(story) for story in stories}
+    active_texts = set()
+    for story in stories:
+        for paragraph in story["paragraphs"]:
+            active_texts.add(paragraph["text"])
+            active_texts.update(lesson_word(word) for word in paragraph["words"] if lesson_word(word))
+        active_texts.update(story["listeningQuestions"])
+        active_texts.update(story.get("allEnglishQuizQuestions", []))
+    active_texts.update(dictionary_words)
+    stale = [text for text in manifest["clips"] if text not in active_texts]
+    for text in stale:
+        file = manifest["clips"][text]["file"]
+        path = OUT / file
+        if path.exists():
+            path.unlink()
+        manifest["clips"].pop(text)
+    for text in [text for text in manifest["stories"] if text not in current_story_texts]:
+        manifest["stories"].pop(text)
+    write_manifest()
+    print(f"Pruned {len(stale)} stale clips left by edited lesson text", flush=True)
+    covered = {file for pack in packs for file in pack["files"]}
+    unknown_files = {clip["file"] for clip in manifest["clips"].values()} - covered - set(legacy_files)
+if unknown_files:
     raise ValueError(f"Unpackaged audio files: {sorted(unknown_files)}")
 if legacy_files:
     l1_pack = next(pack for pack in packs if pack["id"] == "l1")

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Magic English Buddy</title>
+    <script>
+      // GitHub Pages serves this file for every unknown path. Deep links such as
+      // /map or /reader/l1_001 must keep working on a first visit, before the
+      // service worker exists, so hand the path to index.html as a query param.
+      (function () {
+        var base = '/magic-english-buddy/';
+        var path = location.pathname;
+        if (path.indexOf(base) === 0) path = path.slice(base.length);
+        else path = path.replace(/^\//, '');
+        var target = base + '?redirect=' + encodeURIComponent('/' + path + location.search + location.hash);
+        location.replace(target);
+      })();
+    </script>
+  </head>
+  <body>
+    <p>正在打开 Magic English Buddy…</p>
+  </body>
+</html>

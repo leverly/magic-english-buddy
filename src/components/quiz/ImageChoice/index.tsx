@@ -3,11 +3,12 @@
  * 听音辨图题型 - 听音频选择正确的图片
  */
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import type { QuizItem } from '@/db';
 import { ttsService } from '@/services/ttsService';
 import { getQuizEmoji } from '../quizIllustrations';
+import { shuffledUnlessIdentity } from '@/utils/quizPresentation';
 import styles from './ImageChoice.module.css';
 
 interface ImageChoiceProps {
@@ -31,6 +32,12 @@ export const ImageChoice: React.FC<ImageChoiceProps> = ({
   const hintUsedRef = useRef(hintUsed);
   const answerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Authored options put the answer first, so the layout is seeded per question.
+  const displayOptions = useMemo(
+    () => shuffledUnlessIdentity(question.options ?? [], question.id, option => option.value),
+    [question.id, question.options]
+  );
 
   useEffect(
     () => () => {
@@ -110,7 +117,7 @@ export const ImageChoice: React.FC<ImageChoiceProps> = ({
 
       {/* 选项区域 */}
       <div className={styles.optionsGrid}>
-        {question.options?.map((option, index) => (
+        {displayOptions.map((option, index) => (
           <motion.button
             key={option.value}
             className={`${styles.option} ${selectedOption === option.value ? styles.selected : ''}`}

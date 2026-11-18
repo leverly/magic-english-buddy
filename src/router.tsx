@@ -8,6 +8,30 @@ import { Loading } from '@/components/common/Loading';
 import { LessonGuard } from '@/components/common/LessonGuard';
 import { RouteError } from '@/components/common/RouteError';
 
+/**
+ * public/404.html forwards GitHub Pages deep-link misses to the app root with
+ * the original path in ?redirect=. Rewrite the URL before the router reads it,
+ * so a shared /reader/l1_001 link opens that lesson on a cold visit instead of
+ * the GitHub 404 page.
+ */
+const restoreRedirectedPath = (): void => {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  const redirect = url.searchParams.get('redirect');
+  if (!redirect) return;
+  url.searchParams.delete('redirect');
+  const suffix = url.searchParams.toString() ? `?${url.searchParams.toString()}` : '';
+  // The bounce target is a route inside the deployed base path
+  // (/magic-english-buddy/), so the base must be restored alongside the path:
+  // without it the router sees an unknown route and falls back to onboarding.
+  const base = import.meta.env.BASE_URL || '/';
+  const path = redirect.replace(/^\/+/, '');
+  const target = `${base.replace(/\/$/, '')}/${path}${suffix}`;
+  window.history.replaceState(null, '', new URL(target, url.origin).toString());
+};
+
+restoreRedirectedPath();
+
 // 懒加载页面组件
 const OnboardingPage = lazy(() => import('@/pages/OnboardingPage'));
 const MapPage = lazy(() => import('@/pages/MapPage'));
@@ -64,7 +88,7 @@ export const router = createBrowserRouter(
       path: '/quiz/:storyId',
       element: (
         <PageLoader>
-          <LessonGuard><QuizPage /></LessonGuard>
+          <LessonGuard requireReading><QuizPage /></LessonGuard>
         </PageLoader>
       ),
     },

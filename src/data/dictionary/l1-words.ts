@@ -191,6 +191,26 @@ export const l1Dictionary: DictionaryEntry[] = [
   { word: 'sorry', phonetic: '/ˈsɒri/', meaningCn: '对不起', meaningEn: 'expressing regret', partOfSpeech: 'interj.', examples: ['Sorry!', 'I am sorry.'], emoji: '😔', level: 1, frequency: 85 },
   { word: 'yes', phonetic: '/jes/', meaningCn: '是', meaningEn: 'affirmative', partOfSpeech: 'interj.', examples: ['Yes!', 'Yes, I can.'], emoji: '✅', level: 1, frequency: 100 },
   { word: 'no', phonetic: '/noʊ/', meaningCn: '不', meaningEn: 'negative', partOfSpeech: 'interj.', examples: ['No!', 'No, thank you.'], emoji: '❌', level: 1, frequency: 100 },
+
+  // ============ 扩充课文的补充词 ============
+  // Words introduced by the longer L1 lessons. Without these, tapping them in
+  // the reader showed "not found" — the worst possible answer for a beginner.
+  { word: 'tail', phonetic: '/teɪl/', meaningCn: '尾巴', meaningEn: 'the part at the back of an animal', partOfSpeech: 'n.', examples: ['A long tail.', 'The dog has a short tail.'], emoji: '🐒', level: 1, frequency: 70 },
+  { word: 'fur', phonetic: '/fɜːr/', meaningCn: '毛', meaningEn: 'soft hair on an animal', partOfSpeech: 'n.', examples: ['Soft white fur.', 'The cat has soft fur.'], emoji: '🧸', level: 1, frequency: 55 },
+  { word: 'box', phonetic: '/bɒks/', meaningCn: '箱子', meaningEn: 'a container with straight sides', partOfSpeech: 'n.', examples: ['A big box.', 'My toys are in the box.'], emoji: '📦', level: 1, frequency: 75 },
+  { word: 'doll', phonetic: '/dɒl/', meaningCn: '娃娃', meaningEn: 'a toy that looks like a person', partOfSpeech: 'n.', examples: ['A small doll.', 'I have a doll.'], emoji: '🪆', level: 1, frequency: 60 },
+  { word: 'block', phonetic: '/blɒk/', meaningCn: '积木', meaningEn: 'a toy cube used for building', partOfSpeech: 'n.', examples: ['Four blocks.', 'I play with blocks.'], emoji: '🧱', level: 1, frequency: 55 },
+  { word: 'bench', phonetic: '/bentʃ/', meaningCn: '长椅', meaningEn: 'a long seat for two or more people', partOfSpeech: 'n.', examples: ['Sit on the bench.', 'A bench in the park.'], emoji: '🪑', level: 1, frequency: 50 },
+  { word: 'table', phonetic: '/ˈteɪbl/', meaningCn: '桌子', meaningEn: 'furniture with a flat top', partOfSpeech: 'n.', examples: ['At one table.', 'The book is on the table.'], emoji: '🪑', level: 1, frequency: 70 },
+  { word: 'clothes', phonetic: '/kloʊðz/', meaningCn: '衣服', meaningEn: 'things you wear', partOfSpeech: 'n.', examples: ['Warm clothes.', 'I put on my clothes.'], emoji: '👕', level: 1, frequency: 70 },
+  { word: 'dinner', phonetic: '/ˈdɪnər/', meaningCn: '晚饭', meaningEn: 'the main meal of the day', partOfSpeech: 'n.', examples: ['We eat dinner.', 'Dinner is ready.'], emoji: '🍽️', level: 1, frequency: 65 },
+  { word: 'wash', phonetic: '/wɒʃ/', meaningCn: '洗', meaningEn: 'to clean with water', partOfSpeech: 'v.', examples: ['Wash my face.', 'Wash your hands.'], emoji: '🧼', level: 1, frequency: 70 },
+  { word: 'talk', phonetic: '/tɔːk/', meaningCn: '聊天', meaningEn: 'to speak to someone', partOfSpeech: 'v.', examples: ['We talk and laugh.', 'Talk to me.'], emoji: '💬', level: 1, frequency: 70 },
+  { word: 'keep', phonetic: '/kiːp/', meaningCn: '保存', meaningEn: 'to have and not lose', partOfSpeech: 'v.', examples: ['I keep them in a box.', 'Keep it safe.'], emoji: '📥', level: 1, frequency: 65 },
+  { word: 'her', phonetic: '/hɜːr/', meaningCn: '她的', meaningEn: 'belonging to a female person', partOfSpeech: 'pron.', examples: ['Her name is Lily.', 'Her cat is white.'], emoji: '👩', level: 1, frequency: 95 },
+  { word: 'his', phonetic: '/hɪz/', meaningCn: '他的', meaningEn: 'belonging to a male person', partOfSpeech: 'pron.', examples: ['His dog is big.', 'His bag is blue.'], emoji: '👦', level: 1, frequency: 95 },
+  { word: 'its', phonetic: '/ɪts/', meaningCn: '它的', meaningEn: 'belonging to a thing or animal', partOfSpeech: 'pron.', examples: ['Its tail is long.', 'I love its soft fur.'], emoji: '🐾', level: 1, frequency: 90 },
+  { word: 'best', phonetic: '/best/', meaningCn: '最好的', meaningEn: 'better than all others', partOfSpeech: 'adj.', examples: ['My best friend.', 'The best day.'], emoji: '🥇', level: 1, frequency: 80 },
 ];
 
 export default l1Dictionary;

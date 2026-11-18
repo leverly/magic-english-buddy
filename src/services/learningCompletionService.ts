@@ -17,10 +17,15 @@ import {
   getUserMapNodes,
   getUserMapNodesInTransaction,
 } from '@/services/mapProgressService';
+import {
+  buildSupplementContext,
+  withSupplementalQuestions,
+} from '@/services/quizSupplementService';
+import { mistakeWordFor, recordQuizMistakeInTransaction } from '@/services/mistakeService';
 
 export interface LessonAccess {
   allowed: boolean;
-  reason?: 'missing_profile' | 'missing_story' | 'missing_map_node' | 'locked';
+  reason?: 'missing_profile' | 'missing_story' | 'missing_map_node' | 'locked' | 'not_read';
   isReview: boolean;
   story?: Story;
   node?: MapNode;
@@ -64,15 +69,23 @@ const isCorrectAnswer = (question: QuizItem, userAnswer: string | string[]): boo
   return typeof userAnswer === 'string' && userAnswer === question.correctAnswer;
 };
 
-const scoreQuiz = (story: Story, submitted: QuizCompletionAnswer[], hintsUsed: number) => {
-  if (!story.quiz.length) throw new Error('Story has no quiz questions');
+const scoreQuiz = (
+  story: Story,
+  submitted: QuizCompletionAnswer[],
+  hintsUsed: number,
+  userId: string
+) => {
+  // Grade against the same question set the child was shown: authored questions
+  // plus the generated ones that pad short lessons.
+  const quiz = withSupplementalQuestions(story.quiz, buildSupplementContext(story, userId));
+  if (!quiz.length) throw new Error('Story has no quiz questions');
   const answersByQuestion = new Map<string, string | string[]>();
   for (const answer of submitted) {
     if (!answersByQuestion.has(answer.questionId)) {
       answersByQuestion.set(answer.questionId, answer.userAnswer);
     }
   }
-  const answers = story.quiz.map(question => {
+  const answers = quiz.map(question => {
     const userAnswer =
       answersByQuestion.get(question.id) ?? (question.type === 'sentence_order' ? [] : '');
     const correctAnswer =
@@ -87,16 +100,39 @@ const scoreQuiz = (story: Story, submitted: QuizCompletionAnswer[], hintsUsed: n
     };
   });
   const correctCount = answers.filter(answer => answer.isCorrect).length;
-  const score = Math.round((correctCount / story.quiz.length) * 100);
+  const score = Math.round((correctCount / quiz.length) * 100);
   // Existing sentence-order UI allows more than one hint. Preserve that actual
   // cost while rejecting malformed or implausibly large persisted values.
   const safeHints =
     Number.isInteger(hintsUsed) && hintsUsed > 0 && hintsUsed <= 1_000 ? hintsUsed : 0;
   return {
+    quiz,
     answers,
     score,
     quizMagicPower: Math.max(0, correctCount * 3 - safeHints * 5),
   };
+};
+
+/** Queues every missed word for review inside the caller's transaction. */
+const recordQuizMistakesInTransaction = async (
+  userId: string,
+  quiz: QuizItem[],
+  answers: { questionId: string; userAnswer: string | string[]; correctAnswer: string | string[]; isCorrect: boolean }[]
+): Promise<string[]> => {
+  const byId = new Map(quiz.map(question => [question.id, question]));
+  const queued: string[] = [];
+  for (const answer of answers) {
+    if (answer.isCorrect) continue;
+    const question = byId.get(answer.questionId);
+    const word = mistakeWordFor(
+      Array.isArray(answer.correctAnswer) ? '' : answer.correctAnswer,
+      question?.blank
+    );
+    if (!word) continue;
+    const result = await recordQuizMistakeInTransaction(userId, word);
+    if (result.added && !queued.includes(result.word)) queued.push(result.word);
+  }
+  return queued;
 };
 
 const getAccess = async (
@@ -130,12 +166,38 @@ const getAccess = async (
 };
 
 /**
- * Checks a profile, bundled story and the current map unlock state. Challenge
- * nodes can go directly to quiz; this deliberately does not require a reading
- * record.
+ * Checks a profile, bundled story and the current map unlock state.
+ *
+ * This is the reader's gate: opening a story never requires practice first.
  */
 export const getLessonAccess = (userId: string, storyId: string): Promise<LessonAccess> =>
   getAccess(userId, storyId);
+
+/**
+ * The practice gate: a lesson's quiz opens only after the story has been read
+ * through. Previously `/quiz/:storyId` could be opened directly, so the whole
+ * curriculum could be "passed" without ever hearing a sentence.
+ *
+ * Existing profiles that already passed a lesson, or completed its map node,
+ * keep access so old progress is never revoked.
+ */
+export const getPracticeAccess = async (
+  userId: string,
+  storyId: string
+): Promise<LessonAccess> => {
+  const access = await getAccess(userId, storyId);
+  if (!access.allowed || access.isReview) return access;
+
+  const finishedReading = await db.readingHistory
+    .where('userId')
+    .equals(userId)
+    .filter(record => record.storyId === storyId && record.completed)
+    .count();
+  if (finishedReading > 0) return access;
+
+  return { ...access, allowed: false, reason: 'not_read' };
+};
+
 
 const mapLevel = (node: MapNode): number | null => {
   const match = node.regionId.match(/(?:^|_)l([1-7])(?:_|$)/);
@@ -165,6 +227,8 @@ export const completeStoryQuiz = async (
       db.stories,
       db.mapNodes,
       db.userVocabulary,
+      // Missed words are resolved to a gloss before they are queued.
+      db.dictionary,
       db.achievements,
     ],
     async () => {
@@ -177,7 +241,7 @@ export const completeStoryQuiz = async (
       const progress = await db.userProgress.get(input.userId);
       if (!progress) throw new Error('Learning profile not found');
 
-      const settledQuiz = scoreQuiz(access.story, input.answers, input.hintsUsed);
+      const settledQuiz = scoreQuiz(access.story, input.answers, input.hintsUsed, input.userId);
       const passed = isPassingQuiz(settledQuiz.score);
       const firstCompletion = passed && !access.isReview;
       const storyReward = firstCompletion ? access.story.rewards.magicPower : 0;
@@ -198,6 +262,10 @@ export const completeStoryQuiz = async (
       // Every submitted course quiz is real learning activity, including a
       // failed attempt or replay. Rewards remain first-pass-only below.
       const activity = await recordLearningActivityInTransaction(input.userId);
+      // Missed words join the review queue before the reward branch below so a
+      // failed attempt still schedules what it exposed, and so nothing is
+      // written outside this transaction.
+      await recordQuizMistakesInTransaction(input.userId, settledQuiz.quiz, settledQuiz.answers);
       // The completion record and draft deletion commit together. An earlier
       // asynchronous draft write is rejected by quizDraftService's startedAt fence.
       await db.quizDrafts.delete(`${input.userId}:${input.storyId}`);

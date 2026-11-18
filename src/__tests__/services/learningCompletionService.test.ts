@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db, type Story, type UserProgress } from '@/db';
 import { completeStoryQuiz } from '@/services/learningCompletionService';
+import {
+  buildSupplementContext,
+  withSupplementalQuestions,
+} from '@/services/quizSupplementService';
 
 const userId = 'completion-user';
 const story: Story = {
@@ -39,12 +43,27 @@ const progress: UserProgress = {
   lastStudyDate: '2026-09-15',
 };
 
+/**
+ * The graded question set is now authored questions plus generated review
+ * questions, so a "perfect attempt" must answer every one of them.
+ */
+const fullQuiz = () => withSupplementalQuestions(story.quiz, buildSupplementContext(story, userId));
+
+const perfectAnswers = () =>
+  fullQuiz().map(question => ({
+    questionId: question.id,
+    userAnswer:
+      question.type === 'sentence_order'
+        ? (question.correctOrder ?? [])
+        : (question.correctAnswer ?? ''),
+  }));
+
 const input = () => ({
   userId,
   storyId: story.id,
   hintsUsed: 0,
   databaseRevision: '',
-  answers: [{ questionId: 'q1', userAnswer: 'apple' }],
+  answers: perfectAnswers(),
 });
 
 const clearTables = async () => {
@@ -102,9 +121,19 @@ describe('learningCompletionService', () => {
 
     const result = await completeStoryQuiz(input());
 
-    expect(result).toMatchObject({ firstCompletion: true, awardedMagicPower: 18, level: 2 });
+    // Story reward plus 3 per answered question; the graded set includes the
+    // generated review questions, so the total follows the real question count.
+    const expectedMagic = 15 + fullQuiz().length * 3;
+    expect(result).toMatchObject({
+      firstCompletion: true,
+      awardedMagicPower: expectedMagic,
+      level: 2,
+    });
     expect(result.awardedCards.sort()).toEqual(['apple', 'red']);
-    expect(await db.userProgress.get(userId)).toMatchObject({ magicPower: 18, level: 2 });
+    expect(await db.userProgress.get(userId)).toMatchObject({
+      magicPower: expectedMagic,
+      level: 2,
+    });
     expect(await db.userVocabulary.where('userId').equals(userId).count()).toBe(2);
     expect(await db.quizHistory.where('userId').equals(userId).count()).toBe(1);
     expect(await db.mapNodes.get('node_reward')).toMatchObject({ completed: false });
@@ -126,7 +155,7 @@ describe('learningCompletionService', () => {
     const retry = await completeStoryQuiz(input());
 
     expect(retry).toMatchObject({ firstCompletion: false, awardedMagicPower: 0, awardedCards: [] });
-    expect(await db.userProgress.get(userId)).toMatchObject({ magicPower: 18 });
+    expect(await db.userProgress.get(userId)).toMatchObject({ magicPower: 15 + fullQuiz().length * 3 });
     expect(await db.userVocabulary.where('userId').equals(userId).count()).toBe(2);
     expect(await db.quizHistory.where('userId').equals(userId).count()).toBe(2);
     expect(await db.achievements.where('userId').equals(userId).count()).toBe(
@@ -172,17 +201,25 @@ describe('learningCompletionService', () => {
   it('recalculates score and rewards from the stored questions instead of submitted correctness', async () => {
     await seed();
 
+    // Answer every question wrongly, once.
+    const wrongAnswers = fullQuiz().map(question => ({
+      questionId: question.id,
+      userAnswer: question.type === 'sentence_order' ? ['wrong'] : 'not the answer',
+    }));
+
     const result = await completeStoryQuiz({
       ...input(),
       hintsUsed: 1,
-      answers: [{ questionId: 'q1', userAnswer: 'not apple' }],
+      answers: wrongAnswers,
     });
 
     expect(result).toMatchObject({ passed: false, firstCompletion: false, awardedMagicPower: 0 });
     expect(await db.quizHistory.toCollection().first()).toMatchObject({
       score: 0,
       earnedMagicPower: 0,
-      questions: [expect.objectContaining({ questionId: 'q1', isCorrect: false })],
+      questions: expect.arrayContaining([
+        expect.objectContaining({ questionId: 'q1', isCorrect: false }),
+      ]),
     });
     expect((await db.userProgress.get(userId))?.streakDays).toBe(1);
   });

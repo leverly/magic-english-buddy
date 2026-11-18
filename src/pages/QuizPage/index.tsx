@@ -4,9 +4,13 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { QuizItem } from '@/db';
+import type { QuizItem, Story } from '@/db';
 import { QuizContainer, type QuizResultData } from '@/components/quiz';
-import { completeStoryQuiz, getLessonAccess } from '@/services/learningCompletionService';
+import { completeStoryQuiz, getPracticeAccess } from '@/services/learningCompletionService';
+import {
+  buildSupplementContext,
+  withSupplementalQuestions,
+} from '@/services/quizSupplementService';
 import {
   loadQuizDraft,
   saveQuizDraft,
@@ -26,6 +30,7 @@ const QuizPage: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState<QuizItem[]>([]);
+  const [story, setStory] = useState<Story | null>(null);
   const [isReview, setIsReview] = useState(false);
   const [storyRewardMagicPower, setStoryRewardMagicPower] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -51,12 +56,14 @@ const QuizPage: React.FC = () => {
           setLoadError('请先创建学习档案，再开始练习。');
           return;
         }
-        const access = await getLessonAccess(currentUserId, storyId);
+        const access = await getPracticeAccess(currentUserId, storyId);
         if (!access.allowed || !access.story) {
           setLoadError(
             access.reason === 'locked'
               ? '这篇故事还没有解锁。请从地图上的下一关开始。'
-              : '这篇故事暂时不可用。'
+              : access.reason === 'not_read'
+                ? '先读完这个故事，再来做练习。'
+                : '这篇故事暂时不可用。'
           );
           return;
         }
@@ -65,17 +72,25 @@ const QuizPage: React.FC = () => {
           setLoadError('这篇故事的练习正在准备中。');
           return;
         }
+        // Authored exercises are padded so a one-question lesson cannot be
+        // passed by tapping through. Generated questions also recycle words
+        // from earlier stories.
+        const quiz = withSupplementalQuestions(
+          story.quiz,
+          buildSupplementContext(story, currentUserId)
+        );
         let draft: LoadedQuizDraft | null = null;
         const revision = await getLearningRevision();
         try {
-          draft = await loadQuizDraft(currentUserId, storyId, story.quiz);
+          draft = await loadQuizDraft(currentUserId, storyId, quiz);
         } catch (error) {
           // Draft storage is optional. A quota or IndexedDB failure must not
           // block a child from starting a new quiz.
           console.error('Failed to load quiz draft:', error);
         }
         if (cancelled) return;
-        setQuestions(story.quiz);
+        setQuestions(quiz);
+        setStory(story);
         setInitialDraft(draft);
         setAttemptStartedAt(draft?.startedAt ?? Date.now());
         setDatabaseRevision(revision);
@@ -191,6 +206,7 @@ const QuizPage: React.FC = () => {
       <QuizContainer
         questions={questions}
         storyId={storyId || 'unknown'}
+        story={story ?? undefined}
         isReview={isReview}
         storyRewardMagicPower={storyRewardMagicPower}
         initialDraft={initialDraft}

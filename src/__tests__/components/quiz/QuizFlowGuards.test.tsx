@@ -17,6 +17,21 @@ const imageQuestion: QuizItem = {
   correctAnswer: 'apple',
 };
 
+const optionButtons = () =>
+  screen
+    .getAllByRole('button')
+    .filter(button => button.textContent?.includes('🍎') || button.textContent?.includes('🍌'));
+
+const clickAppleThenBanana = () => {
+  // Options render in a seeded order, so the first card on screen is not
+  // necessarily the first authored one. Tap by content, then tap a sibling.
+  const options = optionButtons();
+  const apple = options.find(button => button.textContent?.includes('🍎'))!;
+  const banana = options.find(button => button.textContent?.includes('🍌'))!;
+  fireEvent.click(apple);
+  fireEvent.click(banana);
+};
+
 describe('练习流程保护', () => {
   afterEach(() => vi.useRealTimers());
 
@@ -32,11 +47,7 @@ describe('练习流程保护', () => {
       />
     );
 
-    const options = screen
-      .getAllByRole('button')
-      .filter(button => button.textContent?.includes('🍎') || button.textContent?.includes('🍌'));
-    fireEvent.click(options[0]);
-    fireEvent.click(options[1]);
+    clickAppleThenBanana();
     await act(async () => {
       vi.advanceTimersByTime(300);
     });
@@ -90,11 +101,7 @@ describe('练习流程保护', () => {
     fireEvent.click(screen.getByRole('button', { name: /已使用提示/ }));
     expect(onHint).toHaveBeenCalledTimes(1);
 
-    const options = screen
-      .getAllByRole('button')
-      .filter(button => button.textContent?.includes('🍎') || button.textContent?.includes('🍌'));
-    fireEvent.click(options[0]);
-    fireEvent.click(options[1]);
+    clickAppleThenBanana();
     await act(async () => {
       vi.advanceTimersByTime(300);
     });

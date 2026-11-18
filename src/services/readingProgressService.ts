@@ -231,6 +231,17 @@ class ReadingProgressService {
     return records > 0;
   }
 
+  /** Whether this profile ever opened the story, even without finishing it. */
+  async hasOpenedStory(storyId: string, userId: string): Promise<boolean> {
+    const records = await db.readingHistory
+      .where('userId')
+      .equals(userId)
+      .filter(record => record.storyId === storyId)
+      .count();
+
+    return records > 0;
+  }
+
   /**
    * 标记故事为已完成（更新地图节点状态）
    */

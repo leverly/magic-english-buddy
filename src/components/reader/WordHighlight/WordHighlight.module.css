@@ -4,9 +4,11 @@
 
 .word {
   display: inline;
-  min-height: 44px;
-  padding: 5px 4px;
-  margin: 0 1px;
+  /* Vertical padding keeps the 44px tap target; horizontal padding would add
+     ~10px between every word on top of the space character, which reads as
+     artificial word-spacing in continuous text. */
+  padding: 5px 0;
+  margin: 0;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--transition-fast);

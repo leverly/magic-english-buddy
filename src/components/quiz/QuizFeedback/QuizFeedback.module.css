@@ -121,6 +121,103 @@
   }
 }
 
+/* ============ 答错解释 ============ */
+
+.explanation {
+  width: 100%;
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  text-align: left;
+  background: var(--surface-card, #fff);
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.08));
+  border-radius: var(--radius-lg);
+}
+
+.gloss {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-lg);
+}
+
+.gloss strong {
+  color: var(--ink, #2b2436);
+}
+
+.pos {
+  padding: 1px 6px;
+  font-size: var(--text-xs);
+  color: var(--ink-muted, #756c7e);
+  background: var(--brand-soft, rgba(107, 92, 231, 0.1));
+  border-radius: var(--radius-sm);
+}
+
+.meaning {
+  color: var(--ink, #2b2436);
+  font-weight: var(--font-semibold, 600);
+}
+
+.sentence {
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--line, rgba(0, 0, 0, 0.1));
+}
+
+.sentenceEn {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--ink, #2b2436);
+}
+
+.sentenceCn {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--ink-muted, #756c7e);
+}
+
+.replayBtn {
+  min-height: 40px;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold, 600);
+  color: var(--color-primary, #6b5ce7);
+  background: var(--brand-soft, rgba(107, 92, 231, 0.1));
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.replayBtn:hover:not(:disabled) {
+  background: rgba(107, 92, 231, 0.18);
+}
+
+.replayBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.replayBtn:focus-visible {
+  outline: 3px solid var(--color-primary, #6b5ce7);
+  outline-offset: 2px;
+}
+
+.replayError {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-error, #ef4444);
+}
+
+.mistakeNote {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  color: var(--ink-muted, #756c7e);
+}
+
 @media (max-width: 360px) {
   .container {
     padding: var(--space-6) var(--space-4);
@@ -131,4 +228,13 @@
   .continueBtn {
     width: 100%;
   }
+  .replayBtn {
+    width: 100%;
+  }
+}
+
+.glossLoading {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--ink-muted, #756c7e);
 }
